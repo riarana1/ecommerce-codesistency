@@ -26,22 +26,24 @@ const storeRefreshToken = async (userId: string, refreshToken: string) => {
   ) // 7days
 }
 
+const COOKIE_OPTIONS = {
+  httpOnly: true, // prevent XSS attacks
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const, // better cross-origin support in dev
+}
+
 const setCookies = (
   res: Response,
   accessToken: string,
   refreshToken: string,
 ) => {
   res.cookie('accessToken', accessToken, {
-    httpOnly: true, // prevent XSS attacks, cross site scripting attack
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict', // prevents CSRF attack, cross-site request forgery attack
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    ...COOKIE_OPTIONS,
+    maxAge: 15 * 60 * 1000,
   })
   res.cookie('refreshToken', refreshToken, {
-    httpOnly: true, // prevent XSS attacks, cross site scripting attack
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict', // prevents CSRF attack, cross-site request forgery attack
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    ...COOKIE_OPTIONS,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   })
 }
 
@@ -149,12 +151,7 @@ export const refreshToken = async (req: Request, res: Response) => {
       { expiresIn: '15m' },
     )
 
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 15 * 60 * 1000,
-    })
+    setCookies(res, accessToken, req.cookies.refreshToken)
 
     res.json({ message: 'Token refreshed successfully' })
   } catch (error: unknown) {
